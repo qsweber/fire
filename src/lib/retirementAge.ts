@@ -1,3 +1,5 @@
+import * as _ from "lodash";
+
 interface GetRetirementAgeArgs {
   currentAge: number;
   desiredRetirementSpending: number;
@@ -13,7 +15,7 @@ interface GetRetirementAgeArgs {
 export const getRetirementAge = (args: GetRetirementAgeArgs) => {
   let ageToTest = args.currentAge;
   while (ageToTest <= args.lifeExpectancyAge) {
-    const result = canIRetire(args, ageToTest);
+    const result = canIRetire(_.cloneDeep(args), ageToTest);
     if (result) {
       return `Yes, at ${ageToTest}`;
     }
@@ -28,20 +30,21 @@ export const canIRetire = (
   desiredRetirementAge: number,
 ) => {
   let age = args.currentAge;
-  while (age < args.lifeExpectancyAge) {
+  let potsOfMoney = [...args.potsOfMoney];
+  while (age <= args.lifeExpectancyAge) {
     const expectedReturn =
       args.expectedReturnsByAge.find(
         (expectedReturn) => age > expectedReturn.age,
       )?.return ?? 1;
     if (age < desiredRetirementAge) {
       // still earning money
-      args.potsOfMoney.forEach((potOfMoney) => {
+      potsOfMoney.forEach((potOfMoney) => {
         potOfMoney.amount += potOfMoney.annualAddition;
       });
     } else {
       // you are retired!
       let amountToWithdraw = args.desiredRetirementSpending;
-      args.potsOfMoney.forEach((potOfMoney) => {
+      potsOfMoney.forEach((potOfMoney) => {
         if (!amountToWithdraw) {
           // you already got all of the money you need, no need to touch this pot
           return;
@@ -69,9 +72,11 @@ export const canIRetire = (
       }
     }
 
-    args.potsOfMoney.forEach((potOfMoney) => {
+    potsOfMoney.forEach((potOfMoney) => {
       potOfMoney.amount *= expectedReturn; // TODO: do this below as well
     });
+
+    console.log(age, expectedReturn, JSON.stringify(potsOfMoney));
 
     age += 1;
   }
