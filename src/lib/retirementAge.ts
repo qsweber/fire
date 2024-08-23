@@ -1,13 +1,15 @@
 import * as _ from "lodash";
 
+interface PotOfMoney {
+  eligibleAge: number;
+  amount: number;
+  annualAddition: number;
+}
+
 interface GetRetirementAgeArgs {
   currentAge: number;
   desiredRetirementSpending: number;
-  potsOfMoney: {
-    eligibleAge: number;
-    amount: number;
-    annualAddition: number;
-  }[];
+  potsOfMoney: PotOfMoney[];
   expectedReturnsByAge: { age: number; return: number }[];
   lifeExpectancyAge: number;
 }
@@ -34,6 +36,7 @@ export const canIRetire = (
   while (age <= args.lifeExpectancyAge) {
     const expectedReturn =
       args.expectedReturnsByAge.find(
+        // eslint-disable-next-line no-loop-func
         (expectedReturn) => age > expectedReturn.age,
       )?.return ?? 1;
     if (age < desiredRetirementAge) {
@@ -44,6 +47,7 @@ export const canIRetire = (
     } else {
       // you are retired!
       let amountToWithdraw = args.desiredRetirementSpending;
+      // eslint-disable-next-line no-loop-func
       potsOfMoney.forEach((potOfMoney) => {
         if (!amountToWithdraw) {
           // you already got all of the money you need, no need to touch this pot
