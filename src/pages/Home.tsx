@@ -1,8 +1,35 @@
-import { Section } from "../components/Section";
+import * as React from "react";
 
-export const Home = () => (
-  <div>
-    <h1>Hello!</h1>
-    <Section>This is a basic react template.</Section>
-  </div>
-);
+import { Section } from "../components/Section";
+import { getRetirementAge } from "../lib";
+
+export const Home = () => {
+  const [config, setConfig] = React.useState<string | undefined>();
+  const [parsedConfig, setParsedConfig] = React.useState<any | undefined>();
+  const [error, setError] = React.useState<string | undefined>();
+
+  React.useEffect(() => {
+    setError(undefined);
+    setParsedConfig(undefined);
+    if (!config) {
+      return;
+    }
+    try {
+      setParsedConfig(JSON.parse(config));
+    } catch {
+      setError("invalid json");
+    }
+  }, [config]);
+
+  return (
+    <div>
+      <h1>Enter Config Below!</h1>
+      <Section>
+        <div>
+          <textarea onChange={(event) => setConfig(event.target.value)} />
+        </div>
+        {error ? error : parsedConfig ? getRetirementAge(parsedConfig) : ""}
+      </Section>
+    </div>
+  );
+};
