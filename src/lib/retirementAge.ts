@@ -6,7 +6,7 @@ interface PotOfMoney {
   annualAddition: number;
 }
 
-interface GetRetirementAgeArgs {
+export interface GetRetirementAgeArgs {
   currentAge: number;
   desiredRetirementSpending: number;
   potsOfMoney: PotOfMoney[];
@@ -18,21 +18,25 @@ export const getRetirementAge = (args: GetRetirementAgeArgs) => {
   let ageToTest = args.currentAge;
   while (ageToTest <= args.lifeExpectancyAge) {
     const result = canIRetire(_.cloneDeep(args), ageToTest);
-    if (result) {
-      return `Yes, at ${ageToTest}`;
+    if (result.age) {
+      return { age: ageToTest, potsOfMoney: result.potsOfMoney };
     }
     ageToTest += 1;
   }
 
-  return "No";
+  return { age: undefined, potsOfMoney: [] };
 };
 
 export const canIRetire = (
   args: GetRetirementAgeArgs,
   desiredRetirementAge: number,
-) => {
+): {
+  age?: number;
+  potsOfMoney: { age: number; potsOfMoney: PotOfMoney[] }[];
+} => {
   let age = args.currentAge;
   let potsOfMoney = [...args.potsOfMoney];
+  const result: { age: number; potsOfMoney: PotOfMoney[] }[] = [];
   while (age <= args.lifeExpectancyAge) {
     const expectedReturn =
       args.expectedReturnsByAge.find(
@@ -72,7 +76,7 @@ export const canIRetire = (
 
       if (amountToWithdraw > 0) {
         // sorry you can't retire
-        return false;
+        return { age: undefined, potsOfMoney: result };
       }
     }
 
@@ -81,9 +85,10 @@ export const canIRetire = (
     });
 
     console.log(age, expectedReturn, JSON.stringify(potsOfMoney));
+    result.push({ age, potsOfMoney: _.cloneDeep(potsOfMoney) });
 
     age += 1;
   }
 
-  return true;
+  return { age, potsOfMoney: result };
 };

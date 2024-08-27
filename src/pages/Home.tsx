@@ -1,34 +1,56 @@
-import * as React from "react";
-
 import { Section } from "../components/Section";
-import { getRetirementAge } from "../lib";
+import { useRetirementCalculator } from "../hooks/useRetirementCalculator";
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 export const Home = () => {
-  const [config, setConfig] = React.useState<string | undefined>();
-  const [parsedConfig, setParsedConfig] = React.useState<any | undefined>();
-  const [error, setError] = React.useState<string | undefined>();
-
-  React.useEffect(() => {
-    setError(undefined);
-    setParsedConfig(undefined);
-    if (!config) {
-      return;
-    }
-    try {
-      setParsedConfig(JSON.parse(config));
-    } catch {
-      setError("invalid json");
-    }
-  }, [config]);
+  const { setRawConfig, error, retirementAge, data } = useRetirementCalculator(
+    {},
+  );
 
   return (
     <div>
       <h1>Enter Config Below!</h1>
       <Section>
         <div>
-          <textarea onChange={(event) => setConfig(event.target.value)} />
+          <textarea onChange={(event) => setRawConfig(event.target.value)} />
         </div>
-        {error ? error : parsedConfig ? getRetirementAge(parsedConfig) : ""}
+        {error ?? retirementAge}
+      </Section>
+      <Section>
+        <LineChart
+          width={500}
+          height={300}
+          data={data}
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="age" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="pv"
+            stroke="#8884d8"
+            activeDot={{ r: 8 }}
+          />
+          <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
+        </LineChart>
       </Section>
     </div>
   );
