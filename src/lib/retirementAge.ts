@@ -11,6 +11,7 @@ export interface GetRetirementAgeArgs {
   potsOfMoney: PotOfMoney[];
   expectedReturnsByAge: { age: number; return: number }[];
   lifeExpectancyAge: number;
+  annualInflation: number;
 }
 
 export const getRetirementAge = (args: GetRetirementAgeArgs) => {
@@ -77,7 +78,12 @@ export const canIRetire = (
           },
         ];
       } else {
-        let amountToWithdraw = args.desiredRetirementSpending;
+        let amountToWithdraw =
+          args.desiredRetirementSpending *
+          Math.pow(
+            args.annualInflation,
+            Math.max(ageToSimulate - args.currentAge, 1),
+          );
 
         const newPots = [
           ...prev,
