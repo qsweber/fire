@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
+  // ResponsiveContainer,
 } from "recharts";
 
 export const Home = () => {
