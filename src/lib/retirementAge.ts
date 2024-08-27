@@ -1,6 +1,5 @@
-import * as _ from "lodash";
-
 interface PotOfMoney {
+  name: string;
   eligibleAge: number;
   amount: number;
   annualAddition: number;
@@ -15,80 +14,123 @@ export interface GetRetirementAgeArgs {
 }
 
 export const getRetirementAge = (args: GetRetirementAgeArgs) => {
-  let ageToTest = args.currentAge;
-  while (ageToTest <= args.lifeExpectancyAge) {
-    const result = canIRetire(_.cloneDeep(args), ageToTest);
-    if (result.age) {
-      return { age: ageToTest, potsOfMoney: result.potsOfMoney };
+  const agesToTest = Array(args.lifeExpectancyAge - args.currentAge)
+    .fill(0)
+    .map((_val, index) => index + args.currentAge);
+
+  for (const ageToTest of agesToTest) {
+    const result = canIRetire(args, ageToTest);
+    if (result.result) {
+      return {
+        retirementAge: ageToTest,
+        potsOfMoneyOverTime: result.potsOfMoneyOverTime,
+      };
     }
-    ageToTest += 1;
   }
 
-  return { age: undefined, potsOfMoney: [] };
+  return {
+    retirementAge: undefined,
+    potsOfMoneyOverTime: [],
+  };
 };
 
 export const canIRetire = (
   args: GetRetirementAgeArgs,
   desiredRetirementAge: number,
 ): {
-  age?: number;
-  potsOfMoney: { age: number; potsOfMoney: PotOfMoney[] }[];
+  result: boolean;
+  potsOfMoneyOverTime: {
+    age: number;
+    potsOfMoney: PotOfMoney[];
+  }[];
 } => {
-  let age = args.currentAge;
-  let potsOfMoney = [...args.potsOfMoney];
-  const result: { age: number; potsOfMoney: PotOfMoney[] }[] = [];
-  while (age <= args.lifeExpectancyAge) {
-    const expectedReturn =
-      args.expectedReturnsByAge.find(
-        // eslint-disable-next-line no-loop-func
-        (expectedReturn) => age > expectedReturn.age,
-      )?.return ?? 1;
-    if (age < desiredRetirementAge) {
-      // still earning money
-      potsOfMoney.forEach((potOfMoney) => {
-        potOfMoney.amount += potOfMoney.annualAddition;
-      });
-    } else {
-      // you are retired!
-      let amountToWithdraw = args.desiredRetirementSpending;
-      // eslint-disable-next-line no-loop-func
-      potsOfMoney.forEach((potOfMoney) => {
-        if (!amountToWithdraw) {
-          // you already got all of the money you need, no need to touch this pot
-          return;
+  const agesToSimulate = Array(args.lifeExpectancyAge - args.currentAge + 1)
+    .fill(0)
+    .map((_val, index) => index + args.currentAge);
+
+  let canRetire = true;
+
+  const potsOfMoneyOverTime = agesToSimulate.reduce<
+    {
+      age: number;
+      potsOfMoney: PotOfMoney[];
+    }[]
+  >(
+    (prev, ageToSimulate) => {
+      const expectedReturn =
+        args.expectedReturnsByAge
+          .filter((expectedReturn) => ageToSimulate >= expectedReturn.age)
+          .slice(-1)[0]?.return ?? 1;
+
+      const latest = prev.slice(-1)[0];
+
+      if (ageToSimulate < desiredRetirementAge) {
+        return [
+          ...prev,
+          {
+            age: ageToSimulate,
+            potsOfMoney: latest.potsOfMoney.map((potOfMoney) => ({
+              ...potOfMoney,
+              amount:
+                potOfMoney.amount * expectedReturn + potOfMoney.annualAddition,
+            })),
+          },
+        ];
+      } else {
+        let amountToWithdraw = args.desiredRetirementSpending;
+
+        const newPots = [
+          ...prev,
+          {
+            age: ageToSimulate,
+            potsOfMoney: latest.potsOfMoney.map((potOfMoney) => {
+              if (
+                ageToSimulate < potOfMoney.eligibleAge ||
+                amountToWithdraw === 0
+              ) {
+                return {
+                  ...potOfMoney,
+                  amount: potOfMoney.amount * expectedReturn,
+                };
+              }
+
+              if (potOfMoney.amount >= amountToWithdraw) {
+                const newAmount = potOfMoney.amount - amountToWithdraw;
+                amountToWithdraw = 0;
+                return {
+                  ...potOfMoney,
+                  amount: newAmount * expectedReturn,
+                };
+              } else {
+                amountToWithdraw -= potOfMoney.amount;
+                return {
+                  ...potOfMoney,
+                  amount: 0,
+                };
+              }
+            }),
+          },
+        ];
+
+        if (amountToWithdraw > 0) {
+          canRetire = false;
         }
 
-        if (age < potOfMoney.eligibleAge) {
-          // can't touch this yet
-          return;
-        }
-
-        if (potOfMoney.amount >= amountToWithdraw) {
-          // you got the full amount
-          potOfMoney.amount -= amountToWithdraw;
-          amountToWithdraw = 0;
-        } else {
-          // draw this account to 0 and keep looking
-          amountToWithdraw -= potOfMoney.amount;
-          potOfMoney.amount = 0;
-        }
-      });
-
-      if (amountToWithdraw > 0) {
-        // sorry you can't retire
-        return { age: undefined, potsOfMoney: result };
+        return newPots;
       }
-    }
+    },
+    [
+      {
+        age: args.currentAge,
+        potsOfMoney: args.potsOfMoney.map((potOfMoney) => ({
+          ...potOfMoney,
+        })),
+      },
+    ],
+  );
 
-    potsOfMoney.forEach((potOfMoney) => {
-      potOfMoney.amount *= expectedReturn; // TODO: do this below as well
-    });
-
-    console.log(age, expectedReturn, JSON.stringify(potsOfMoney));
-    result.push({ age, potsOfMoney: _.cloneDeep(potsOfMoney) });
-
-    age += 1;
-  }
-
-  return { age, potsOfMoney: result };
+  return {
+    result: canRetire,
+    potsOfMoneyOverTime,
+  };
 };

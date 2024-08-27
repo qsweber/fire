@@ -32,16 +32,17 @@ export const useRetirementCalculator = (
     try {
       const parsedConfig = JSON.parse(rawConfig);
       const result = getRetirementAge(parsedConfig);
-      setRetirementAge(result.age?.toString() ?? "No!");
+      setRetirementAge(result.retirementAge?.toString() ?? "No!");
       console.log("qsw", result);
       setData(
-        result.potsOfMoney?.map((potOfMoney) => ({
+        result.potsOfMoneyOverTime.map((potOfMoney) => ({
           age: potOfMoney.age,
-          uv: potOfMoney.potsOfMoney[0].amount,
-          pv: potOfMoney.potsOfMoney[1].amount,
+          uv: Math.round(potOfMoney.potsOfMoney[0].amount) / 1000000,
+          pv: Math.round(potOfMoney.potsOfMoney[1].amount) / 1000000,
         })),
       );
-    } catch {
+    } catch (error) {
+      console.log(error);
       setError("invalid json");
     }
   }, [rawConfig]);
